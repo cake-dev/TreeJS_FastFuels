@@ -1,0 +1,59 @@
+{
+  "name": "@dgreenheck/tree-js",
+  "author": "Daniel Greenheck",
+  "version": "0.4.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dgreenheck/tree-js.git"
+  },
+  "homepage": "https://dgreenheck.github.io/tree-js/",
+  "bugs": {
+    "url": "https://github.com/dgreenheck/tree-js/issues"
+  },
+  "type": "module",
+  "main": "build/@dgreenheck-tree-js.umd.js",
+  "module": "build/@dgreenheck-tree-js.es.js",
+  "exports": {
+    ".": {
+      "import": "./build/@dgreenheck-tree-js.es.js",
+      "require": "./build/@dgreenheck-tree-js.umd.js"
+    }
+  },
+  "files": [
+    "build",
+    "demo",
+    "src",
+    "index.js"
+  ],
+  "scripts": {
+    "build:demo": "vite build --config vite.demo.config.js",
+    "build:npm": "vite build --config vite.npm.config.js",
+    "build:watch": "vite build --config vite.npm.config.js --watch",
+    "demo": "vite --config vite.demo.config.js --host 127.0.0.1",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "devDependencies": {
+    "prettier": "3.3.3",
+    "three": "^0.167.1",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.9.1",
+    "vite-plugin-static-copy": "^1.0.5"
+  },
+  "peerDependencies": {
+    "three": ">=0.167"
+  },
+  "keywords": [
+    "threejs",
+    "three-js",
+    "procedural",
+    "generation",
+    "tree"
+  ],
+  "dependencies": {
+    "@dgreenheck/tree-js": "^0.4.0",
+    "canvas": "^2.11.2",
+    "jsdom": "^25.0.0",
+    "jszip": "^3.10.1"
+  }
+}
