@@ -5,6 +5,7 @@
 ## Note: this has only been run on Windows, and may not work as configured on other systems.
 
 ## Installation and Requirements
+- Node.js and npm (Node Package Manager) are required to run the demo and build the project.  You can download Node.js from [nodejs.org](https://nodejs.org/).  npm is included with Node.js.
 - Clone the repository:
 ```bash
 git clone https://github.com/cake-dev/TreeJS_FastFuels.git
