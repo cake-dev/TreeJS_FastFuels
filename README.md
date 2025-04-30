@@ -15,7 +15,7 @@ cd treejs/tree-js
 ```bash
 pip install pandas shapely geopandas
 ```
-- Install the npm environment:
+- Install the npm environment (run from treejs/tree-js):
 ```bash
 npm install
 npm run build:npm
