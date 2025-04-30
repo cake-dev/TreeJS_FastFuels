@@ -4,6 +4,7 @@ import time
 import pandas as pd
 import geopandas as gpd
 from requests import request
+import requests
 from shapely import Point
 
 os.environ["FASTFUELS_API_KEY"] = "770a09d244dd45d38105dbaa0eb8023d"
@@ -15,10 +16,6 @@ s3_url = "s3://dataforgood-fb-data/forests/v1/alsgedi_global_v6_float/chm/"
 
 # Load the geospatial ROI polygon. This is the area we want to get CHM and tree inventory data for.
 roi_gdf = gpd.read_file("data/roi.geojson")
-
-# Open the tiles in a geodataframe. This maps spatial locations to .tif files in the S3 bucket.
-tiles_gdf = gpd.read_file("data/tiles.geojson")
-
 
 
 # Define a helper function to make requests with the FastFuels API
