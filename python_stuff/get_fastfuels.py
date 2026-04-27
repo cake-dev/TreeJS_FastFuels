@@ -15,7 +15,7 @@ os.environ['AWS_NO_SIGN_REQUEST'] = 'YES'
 s3_url = "s3://dataforgood-fb-data/forests/v1/alsgedi_global_v6_float/chm/"
 
 # Load the geospatial ROI polygon. This is the area we want to get CHM and tree inventory data for.
-roi_gdf = gpd.read_file("data/roi.geojson")
+roi_gdf = gpd.read_file("roi.geojson")
 
 
 # Define a helper function to make requests with the FastFuels API
@@ -62,7 +62,7 @@ while not export_completed:
     if export_response_json["status"] == "completed":
         export_completed = True
         response = request("GET", export_response_json["signedUrl"])
-        with open("data/tree_inventory_{}.csv".format(domain_id), "wb") as f:
+        with open("tree_inventory_{}.csv".format(domain_id), "wb") as f:
             f.write(response.content)
     else:
         print("Export not completed yet. Waiting 5 seconds...")
@@ -70,11 +70,11 @@ while not export_completed:
 print(export_response.json())  # Output: Details of the export resource
 
 # Convert the tree inventory CSV to a geodataframe and reproject to EPSG:3857
-tree_inventory_df = pd.read_csv("data/tree_inventory_{}.csv".format(domain_id)).dropna()
+tree_inventory_df = pd.read_csv("tree_inventory_{}.csv".format(domain_id)).dropna()
 # Assuming you have a chm_raster (rasterio object)
 tree_inventory_gdf = gpd.GeoDataFrame(tree_inventory_df, geometry=[Point(x, y) for x, y in zip(tree_inventory_df["X"], tree_inventory_df["Y"])], crs="EPSG:32612")
-tree_inventory_gdf_4326 = tree_inventory_gdf.to_crs("EPSG:4326")
+tree_inventory_gdf_5070 = tree_inventory_gdf.to_crs("EPSG:5070")
 # change X and Y columns to have the values of the geometry
-tree_inventory_gdf_4326["X"] = tree_inventory_gdf_4326.geometry.x
-tree_inventory_gdf_4326["Y"] = tree_inventory_gdf_4326.geometry.y
-tree_inventory_gdf_4326.to_csv("data/tree_inventory_{}_4326.csv".format(domain_id), index=False)
+tree_inventory_gdf_5070["X"] = tree_inventory_gdf_5070.geometry.x
+tree_inventory_gdf_5070["Y"] = tree_inventory_gdf_5070.geometry.y
+tree_inventory_gdf_5070.to_csv("tree_inventory_{}_5070.csv".format(domain_id), index=False)
