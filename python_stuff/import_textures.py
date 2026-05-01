@@ -64,8 +64,8 @@ LIVE_ONLY = True
 # If running directly inside the Unreal Engine editor (not from CLI),
 # set this to True and configure the paths below.
 RUN_IN_EDITOR = True
-EDITOR_ROI_PATH = "C:\\Users\\bovam\\Documents\\Code\\Thesis\\TreeJS_FastFuels\\python_stuff\\roi2.geojson"
-EDITOR_OUT_DIR = "C:\\Users\\bovam\\Documents\\Code\\Thesis\\TreeJS_FastFuels\\python_stuff\\out_editor"
+EDITOR_ROI_PATH = "C:\\Users\\Jake\\Documents\\Code\\TreeMaker\\TreeJS_FastFuels\\python_stuff\\roi2.geojson"
+EDITOR_OUT_DIR = "C:\\Users\\Jake\\Documents\\Code\\TreeMaker\\TreeJS_FastFuels\\python_stuff\\out_editor"
 EDITOR_UE_CONTENT_PATH = "/Game"
 EDITOR_SIM_EXTENT = 512.0
 EDITOR_GRID_RES = 512
@@ -256,7 +256,7 @@ def rasterize_trees(trees, grid_res, bbox_5070):
     return spcd_grid, dia_grid, ht_grid, cr_grid
 
 def write_exr_rgba(path, r, g, b, a):
-    img = np.stack([r, g, b, a], axis=-1).astype(np.float16)
+    img = np.stack([r, g, b, a], axis=-1).astype(np.float32)
     h, w, _ = img.shape
     errors = []
 
@@ -264,10 +264,22 @@ def write_exr_rgba(path, r, g, b, a):
         import OpenEXR
         import Imath
         header = OpenEXR.Header(w, h)
-        half = Imath.PixelType(Imath.PixelType.HALF)
-        header["channels"] = {"R": Imath.Channel(half), "G": Imath.Channel(half), "B": Imath.Channel(half), "A": Imath.Channel(half)}
+        full = Imath.PixelType(Imath.PixelType.FLOAT)
+        header["channels"] = {
+            "R": Imath.Channel(full),
+            "G": Imath.Channel(full),
+            "B": Imath.Channel(full),
+            "A": Imath.Channel(full),
+        }
+        # Force no compression — RII often rejects compressed EXRs
+        header["compression"] = Imath.Compression(Imath.Compression.NO_COMPRESSION)
         out = OpenEXR.OutputFile(str(path), header)
-        out.writePixels({"R": img[..., 0].tobytes(), "G": img[..., 1].tobytes(), "B": img[..., 2].tobytes(), "A": img[..., 3].tobytes()})
+        out.writePixels({
+            "R": img[..., 0].tobytes(),
+            "G": img[..., 1].tobytes(),
+            "B": img[..., 2].tobytes(),
+            "A": img[..., 3].tobytes(),
+        })
         out.close()
         return
     except Exception as e:
@@ -275,9 +287,11 @@ def write_exr_rgba(path, r, g, b, a):
 
     try:
         import OpenImageIO as oiio
-        spec = oiio.ImageSpec(w, h, 4, "half")
+        spec = oiio.ImageSpec(w, h, 4, "float")
+        spec.attribute("compression", "none")  # uncompressed
         out = oiio.ImageOutput.create(str(path))
-        if out is None: raise RuntimeError("OIIO could not create EXR writer")
+        if out is None:
+            raise RuntimeError("OIIO could not create EXR writer")
         out.open(str(path), spec)
         out.write_image(img)
         out.close()
@@ -285,7 +299,7 @@ def write_exr_rgba(path, r, g, b, a):
     except Exception as e:
         errors.append(f"OpenImageIO: {e}")
 
-    raise RuntimeError("Could not write EXR. Install OpenEXR or openimageio.\n" + "\n".join(errors))
+    raise RuntimeError("Could not write EXR.\n" + "\n".join(errors))
 
 def bake_tree_exrs(csv_path, out_dir, grid_res, bbox_5070):
     print(f"Reading {csv_path}...")
