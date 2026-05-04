@@ -332,6 +332,63 @@ def bake_tree_exrs(csv_path, out_dir, grid_res, bbox_5070):
         f.write(f"width_m={xmax-xmin}\nheight_m={ymax-ymin}\n")
     return meta_path
 
+def bake_tree_pngs(csv_path, out_dir, grid_res, bbox_5070):
+    """Write tree data as 4× 16-bit grayscale PNGs (RII-friendly)."""
+    print(f"Reading {csv_path}...")
+    trees = list(parse_csv_5070(csv_path, live_only=LIVE_ONLY))
+    print(f"  {len(trees)} live trees")
+    if not trees:
+        raise RuntimeError("No trees to rasterize.")
+
+    print(f"Rasterizing to {grid_res}x{grid_res}...")
+    spcd, dia, ht, cr = rasterize_trees(trees, grid_res, bbox_5070)
+
+    spcd = np.flipud(spcd)
+    dia = np.flipud(dia)
+    ht = np.flipud(ht)
+    cr = np.flipud(cr)
+
+    # Quantize each channel to 16-bit using documented scales.
+    # The HLSL must apply the inverse to recover real units.
+    SPCD_SCALE = 1.0           # SPCD is 0..~1000, fits in u16 directly
+    DIA_SCALE  = 100.0         # DIA in cm; *100 → mm; max DIA ~600cm = 60000
+    HT_SCALE   = 100.0         # HT in m; *100 → cm; max HT ~600m = 60000
+    CR_SCALE   = 65535.0       # CR is 0..1, scale to full u16 range
+
+    def to_u16(arr, scale, max_val=65535):
+        return np.clip(arr * scale, 0, max_val).astype(np.uint16)
+
+    spcd_u16 = to_u16(spcd, SPCD_SCALE)
+    dia_u16  = to_u16(dia,  DIA_SCALE)
+    ht_u16   = to_u16(ht,   HT_SCALE)
+    cr_u16   = to_u16(cr,   CR_SCALE)
+    mask_u16 = ((dia > 0.0).astype(np.uint16)) * 65535
+
+    def write_png16(path, arr_u16):
+        Image.fromarray(arr_u16, mode="I;16").save(str(path), format="PNG")
+
+    write_png16(out_dir / "TreeData_SPCD.png", spcd_u16)
+    write_png16(out_dir / "TreeData_DIA.png",  dia_u16)
+    write_png16(out_dir / "TreeData_HT.png",   ht_u16)
+    write_png16(out_dir / "TreeData_CR.png",   cr_u16)
+    write_png16(out_dir / "TreeData_MASK.png", mask_u16)
+    print(f"  Wrote 5 tree PNGs to {out_dir}")
+
+    # Metadata so HLSL knows the scales
+    meta_path = out_dir / "TreeData_meta.txt"
+    xmin, ymin, xmax, ymax = bbox_5070
+    with open(meta_path, "w") as f:
+        f.write(f"grid_res={grid_res}\n")
+        f.write(f"xmin={xmin}\nymin={ymin}\nxmax={xmax}\nymax={ymax}\n")
+        f.write(f"cell_w={(xmax - xmin) / grid_res}\n")
+        f.write(f"cell_h={(ymax - ymin) / grid_res}\n")
+        f.write(f"width_m={xmax-xmin}\nheight_m={ymax-ymin}\n")
+        f.write(f"spcd_scale={SPCD_SCALE}\n")
+        f.write(f"dia_scale={DIA_SCALE}\n")
+        f.write(f"ht_scale={HT_SCALE}\n")
+        f.write(f"cr_scale={CR_SCALE}\n")
+    return meta_path
+
 
 # =====================================================================
 # 4. HEIGHTMAP FETCH
@@ -610,7 +667,8 @@ def main():
         reproject_csv_to_5070(csv_raw_path, csv_5070_path, source_crs=utm_crs)
 
         print("\n" + "=" * 60 + "\nSTEP 3: Bake tree EXRs\n" + "=" * 60)
-        bake_tree_exrs(csv_5070_path, out_dir, grid_res, bbox_5070)
+        #bake_tree_exrs(csv_5070_path, out_dir, grid_res, bbox_5070)
+        bake_tree_pngs(csv_5070_path, out_dir, grid_res, bbox_5070)
 
     # ---- 3. Heightmap ----
     if not skip_heightmap:
