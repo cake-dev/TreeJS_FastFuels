@@ -471,8 +471,19 @@ def build_heightmap(bbox_latlon, zoom, out_size_px, normalize="smart"):
     return arr_u16, emin, emax
 
 def write_heightmap_png(path, arr_u16):
-    img = Image.fromarray(arr_u16, mode="I;16")
-    img.save(str(path), format="PNG")
+    """
+    Write u16 heightmap as RGBA8 PNG with the value packed into R (hi byte)
+    and G (lo byte). Sidesteps RII's 8-bit PNG load path. The copy material
+    reconstructs full precision before writing to the R16f render target.
+    """
+    if arr_u16.dtype != np.uint16:
+        arr_u16 = arr_u16.astype(np.uint16)
+    h, w = arr_u16.shape
+    rgba = np.zeros((h, w, 4), dtype=np.uint8)
+    rgba[..., 0] = (arr_u16 >> 8).astype(np.uint8)
+    rgba[..., 1] = (arr_u16 & 0xFF).astype(np.uint8)
+    rgba[..., 3] = 255
+    Image.fromarray(rgba, mode="RGBA").save(str(path), format="PNG")
 
 
 # =====================================================================
@@ -497,7 +508,7 @@ def import_and_configure_textures(source_dir, dest_path):
     IMPORT_CONFIG = {
         "heightmap.png": {
             "mip_gen_settings": unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS,
-            "compression_settings": unreal.TextureCompressionSettings.TC_GRAYSCALE,
+            "compression_settings": unreal.TextureCompressionSettings.TC_VECTOR_DISPLACEMENTMAP,
             "srgb": False,
             "address_x": unreal.TextureAddress.TA_CLAMP,
             "address_y": unreal.TextureAddress.TA_CLAMP,
